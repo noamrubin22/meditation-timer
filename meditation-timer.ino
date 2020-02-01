@@ -24,38 +24,50 @@ sevseg.setBrightness(90);
 pinMode(sw_pin, INPUT_PULLUP);
 
 Serial.begin(57600);
-  Serial.println("Start: rotary encoder.");
-  
-
-//int i = digitalRead(sw_pin);
-//
-//if(!i){
-//    display_num(5);
-//}
-//  display_num(20);
 }
+
+bool flag = 0;
+
+enum State {
+  INIT,
+  SELECT_TIME
+};
+
+int countdown = 0;
+int newPos = 0;
+int previousMillis=0;
+int interval = 300;
 
 void loop()
 {
-  static int pos = 0;
+  static bool pressed = false;
+  static State state = INIT;
+  
+  if(!digitalRead(sw_pin) )
+    pressed = true;
+  else if (digitalRead(sw_pin) && pressed) {
+    pressed = false;
+    state = (State)((state + 1) % 2);
+  }
+    
+ if (state == SELECT_TIME){
   encoder.tick();
-  
-  int newPos = encoder.getPosition();
-  if (pos != newPos) {
-    Serial.print(newPos);
-    Serial.println();
-    pos = newPos;
-  } // if
-
+  newPos = encoder.getPosition();
   sevseg.setNumber(newPos, 2);
-  
-  sevseg.refreshDisplay(); // Must run repeatedly
-} // loop ()
-// register shift? multiplexer?
-// code the rotary encoder
-// make the numbers blink before choosing
-// start timer
-
+  sevseg.refreshDisplay();
+  countdown = newPos;
+  flag = true;
+ } else {
+  if(flag){
+    display_num(countdown);
+  } else {
+    sevseg.setNumber(countdown, 2);
+    sevseg.refreshDisplay(); // Must run repeatedly
+  }
+ }
+    //display_num(newPos);
+    //sevseg.blank();
+}
 
 void display_num(int num){
 
@@ -72,7 +84,7 @@ void display_num(int num){
     dis_sec = seconds % 60;
     displayed = minutes + dis_sec;   
   }
-  sevseg.setNumber(displayed, 2);
   
+  sevseg.setNumber(displayed, 2); 
   sevseg.refreshDisplay(); // Must run repeatedly
 }
