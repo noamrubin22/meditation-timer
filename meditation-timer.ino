@@ -23,7 +23,15 @@ void setup() {
   byte numDigits = 4;
   byte digitPins[] = {A2, 3, 4, 5};
   byte segmentPins[] = {6, 7, 8, 9, 10, 11, 12, 13};
-  sevseg.begin(COMMON_CATHODE, numDigits, digitPins, segmentPins);
+  
+  bool resistorsOnSegments = false; // 'false' means resistors are on digit pins
+  byte hardwareConfig = COMMON_CATHODE;
+  bool updateWithDelays = false; // Default 'false' is Recommended, if true the display will blank while delaying
+  bool leadingZeros = true;
+  bool disableDecPoint = false;
+  
+  // sevseg.begin(COMMON_CATHODE, numDigits, digitPins, segmentPins);
+  sevseg.begin(hardwareConfig, numDigits, digitPins, segmentPins, resistorsOnSegments, updateWithDelays, leadingZeros, disableDecPoint);
   sevseg.setBrightness(90);
   
   // use pull-up as a internal resistor. 
@@ -72,6 +80,11 @@ void loop()
   if (state == SELECT_TIME){
     encoder.tick();
     countdown = encoder.getPosition();
+    // set the counter to zero if it going into minus values
+    if (countdown < 0){
+      countdown = 0;
+      encoder.setPosition(countdown);
+    }
     sevseg.setNumber(countdown, 2);
     sevseg.refreshDisplay();
     // start gong when time is set and add positioning time
@@ -80,15 +93,64 @@ void loop()
   } else {
   // if we are in the INIT state
       if (positioning_time){
-        delay(5000);
+        time_stamp = millis();
+
+        while(millis() - time_stamp < 1000){
+          char str[] = "----";
+          sevseg.setChars(str);
+          sevseg.refreshDisplay();
+        }
+        
+        while(millis() - time_stamp < 2000){
+          char str[] = "---";
+          sevseg.setChars(str);
+          sevseg.refreshDisplay();
+        }
+
+        while(millis() - time_stamp < 3000){
+          char str[] = "--";
+          sevseg.setChars(str);
+          sevseg.refreshDisplay();
+        }
+
+        while(millis() - time_stamp < 4000){
+          char str[] = "-";
+          sevseg.setChars(str);
+          sevseg.refreshDisplay();
+        }
+
+        while(millis() - time_stamp < 5000){
+          char str[] = "";
+          sevseg.setChars(str);
+          sevseg.refreshDisplay();
+        }
+
+        
         positioning_time = false;
       }
       // start countdown
       if (do_gong) {
        // do the gong, reset the counter and set countingdown flag to counting.
        myservo.write(135);
-       delay(200);
+       
+       //delay(200);
+       time_stamp = millis();
+       while(millis() - time_stamp < 200){
+        char str[] = "----";
+        sevseg.setChars(str);
+        sevseg.refreshDisplay();
+       }
+
+       
        myservo.write(0);
+
+       time_stamp = millis();
+       while(millis() - time_stamp < 200){
+        char str[] = "----";
+        sevseg.setChars(str);
+        sevseg.refreshDisplay();
+       }
+       
        do_gong = false;
        time_stamp = millis();
       } else {
@@ -122,6 +184,13 @@ void display_countdown(int num, unsigned long time_stamp){
   sevseg.refreshDisplay(); // Must run repeatedly
 }
 
-// to do for next time: 
-// remove negatives in SELECTION_TIME mode. 
-// add a delay without messing with the display for positioning_time
+// TODO: remove negatives in SELECTION_TIME mode. -----DONE-----
+// TODO: add a delay without messing with the display for positioning_time
+// TODO: ((( CLEAN UP AND REFACTORY )))
+// TODO: add pause state by button press
+// TODO: save last setup, see EEPROM https://www.arduino.cc/en/Reference/EEPROM
+// TODO: instead of timers/time counters use preocessor timer interrupts and implement interrpt service routine
+// TODO: use more states or implement state machine
+// TODO: use adjustable value for waiting time while the servo is moving.
+//       Calculate the duty time needed for 1 degree by reading the current position and mesuring the current position,
+//       see https://www.arduino.cc/en/Reference/ServoRead
